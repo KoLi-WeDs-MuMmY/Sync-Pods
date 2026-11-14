@@ -1,0 +1,6 @@
+{
+  "name": "BluePulse",
+  "description": "Bluetooth device manager, dual-output audio sync, latency calibration, RSSI radar, per-device EQ, and Floating Island overlay.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

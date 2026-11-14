@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">BluePulse</string>
+    <string name="tagline">Bluetooth Audio, Dual-Sync &amp; Signal Studio</string>
+
+    <!-- Navigation -->
+    <string name="nav_hub">Hub</string>
+    <string name="nav_dual_sync">Dual Sync</string>
+    <string name="nav_radar">Radar</string>
+    <string name="nav_eq_rules">EQ &amp; Rules</string>
+
+    <!-- Permissions -->
+    <string name="perm_title">Bluetooth &amp; Overlay Setup</string>
+    <string name="perm_subtitle">Grant nearby device discovery, notifications, and system overlay permissions for full telemetry and Floating Island pop-ups.</string>
+    <string name="perm_bt_title">Nearby Bluetooth Devices</string>
+    <string name="perm_bt_desc">Required to scan, pair, monitor RSSI signal strength, and read battery &amp; codec telemetry.</string>
+    <string name="perm_notif_title">Telemetry Notifications</string>
+    <string name="perm_notif_desc">Keeps the Floating Island service active reliably in the background.</string>
+    <string name="perm_overlay_title">System-Wide Floating Island</string>
+    <string name="perm_overlay_desc">Allows animated Dynamic Island connection &amp; sync pop-ups over other apps.</string>
+    <string name="perm_grant_bt">Grant Bluetooth</string>
+    <string name="perm_grant_notif">Allow Notifications</string>
+    <string name="perm_grant_overlay">Enable Overlay</string>
+    <string name="perm_granted">Granted</string>
+    <string name="perm_needed">Action Needed</string>
+
+    <!-- Themes -->
+    <string name="theme_light">Daylight Light</string>
+    <string name="theme_dark">Slate Dark</string>
+    <string name="theme_amoled">True-Black AMOLED</string>
+
+    <!-- Overlay Notification -->
+    <string name="overlay_channel_name">BluePulse Floating Island</string>
+    <string name="overlay_channel_desc">Live Bluetooth device status, dual-output sync, and Dynamic Island overlay.</string>
+    <string name="overlay_service_title">BluePulse Island Active</string>
+    <string name="overlay_service_text">Monitoring Bluetooth audio, battery, and dual-sync telemetry.</string>
+</resources>
