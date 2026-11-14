@@ -31,11 +31,23 @@ jobs:
             "$SDKMANAGER" "platforms;android-36.1" "build-tools;36.0.0" > /dev/null
           fi
 
-      - name: Decode debug keystore
+      - name: Ensure debug keystore exists
         run: |
-          if [ -f debug.keystore.base64 ] && [ ! -f debug.keystore ]; then
-            base64 -d debug.keystore.base64 > debug.keystore
+          if [ -f debug.keystore.base64 ] && [ ! -s debug.keystore ]; then
+            base64 -d debug.keystore.base64 > debug.keystore || rm -f debug.keystore
           fi
+          if [ ! -s debug.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          keytool -list -keystore debug.keystore -storepass android
 
       - name: Ensure .env exists for Secrets Gradle Plugin
         run: |
@@ -49,13 +61,13 @@ jobs:
           gradle-version: '9.3.1'
 
       - name: Run Unit & Robolectric Tests
-        run: gradle :app:testDebugUnitTest --no-configuration-cache --stacktrace
+        run: gradle :app:testDebugUnitTest --no-configuration-cache --console=plain
 
       - name: Run Android Lint
-        run: gradle :app:lintDebug --no-configuration-cache --stacktrace
+        run: gradle :app:lintDebug --no-configuration-cache --console=plain
 
       - name: Assemble Debug APK
-        run: gradle :app:assembleDebug --no-configuration-cache --stacktrace
+        run: gradle :app:assembleDebug --no-configuration-cache --console=plain
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
