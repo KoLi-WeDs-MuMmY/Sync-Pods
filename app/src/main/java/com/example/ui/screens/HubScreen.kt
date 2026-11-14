@@ -20,12 +20,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.BluetoothSearching
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Battery5Bar
 import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.BluetoothAudio
 import androidx.compose.material.icons.rounded.BluetoothDisabled
-import androidx.compose.material.icons.rounded.BluetoothSearching
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Radar
@@ -358,7 +358,7 @@ private fun HeroCockpitCard(
               Text("Stop Scan")
             } else {
               Icon(
-                imageVector = Icons.Rounded.BluetoothSearching,
+                imageVector = Icons.AutoMirrored.Rounded.BluetoothSearching,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
               )

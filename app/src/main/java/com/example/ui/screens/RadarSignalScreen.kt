@@ -26,7 +26,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.BluetoothSearching
+import androidx.compose.material.icons.automirrored.rounded.BluetoothSearching
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Radar
 import androidx.compose.material.icons.rounded.Sensors
@@ -126,7 +126,7 @@ fun RadarSignalScreen(
                 modifier = Modifier.testTag("radar_scan_toggle"),
               ) {
                 Icon(
-                  imageVector = Icons.Rounded.BluetoothSearching,
+                  imageVector = Icons.AutoMirrored.Rounded.BluetoothSearching,
                   contentDescription = null,
                   modifier = Modifier.size(16.dp),
                 )

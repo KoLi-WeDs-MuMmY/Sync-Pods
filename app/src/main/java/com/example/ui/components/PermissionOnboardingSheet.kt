@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.BluetoothSearching
+import androidx.compose.material.icons.automirrored.rounded.BluetoothSearching
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.NotificationsActive
@@ -70,7 +70,7 @@ fun PermissionOnboardingSheet(
       )
 
       PermissionItemCard(
-        icon = Icons.Rounded.BluetoothSearching,
+        icon = Icons.AutoMirrored.Rounded.BluetoothSearching,
         title = stringResource(R.string.perm_bt_title),
         description = stringResource(R.string.perm_bt_desc),
         granted = permissions.bluetoothGranted,
