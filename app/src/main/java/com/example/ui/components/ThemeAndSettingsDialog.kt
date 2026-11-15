@@ -111,9 +111,9 @@ fun ThemeAndSettingsDialog(
                   )
                   Text(
                     text = when (mode) {
-                      ThemeMode.AMOLED -> "Pure #000000 black with crisp OLED borders"
-                      ThemeMode.DARK -> "Low-glare slate surfaces"
-                      ThemeMode.LIGHT -> "High-clarity daylight Material 3"
+                      ThemeMode.AMOLED -> "Pure #000000 black with plum-lavender accents"
+                      ThemeMode.DARK -> "Deep Plum & Soft Lavender M3 Expressive"
+                      ThemeMode.LIGHT -> "Lavender Daylight Material 3 Expressive"
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

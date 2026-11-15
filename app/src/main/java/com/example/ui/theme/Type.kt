@@ -28,44 +28,46 @@ val JetBrainsMonoFontFamily = FontFamily(
   Font(R.font.jetbrains_mono, FontWeight.Bold),
 )
 
-val MonoTelemetryStyle = TextStyle(
-  fontFamily = JetBrainsMonoFontFamily,
-  fontWeight = FontWeight.Medium,
-  fontFeatureSettings = "tnum",
-)
-
 val BluePulseTypography = Typography(
+  displayMedium = TextStyle(
+    fontFamily = SpaceGroteskFontFamily,
+    fontWeight = FontWeight.Bold,
+    fontSize = 38.sp,
+    lineHeight = 42.sp,
+    letterSpacing = (-1.1).sp,
+  ),
   displaySmall = TextStyle(
     fontFamily = SpaceGroteskFontFamily,
     fontWeight = FontWeight.Bold,
     fontSize = 30.sp,
-    lineHeight = 36.sp,
-    letterSpacing = (-0.5).sp,
+    lineHeight = 34.sp,
+    letterSpacing = (-0.8).sp,
   ),
   headlineMedium = TextStyle(
     fontFamily = SpaceGroteskFontFamily,
     fontWeight = FontWeight.Bold,
     fontSize = 24.sp,
-    lineHeight = 30.sp,
-    letterSpacing = (-0.3).sp,
+    lineHeight = 29.sp,
+    letterSpacing = (-0.5).sp,
   ),
   headlineSmall = TextStyle(
     fontFamily = SpaceGroteskFontFamily,
-    fontWeight = FontWeight.SemiBold,
+    fontWeight = FontWeight.Bold,
     fontSize = 20.sp,
     lineHeight = 26.sp,
+    letterSpacing = (-0.2).sp,
   ),
   titleLarge = TextStyle(
     fontFamily = SpaceGroteskFontFamily,
-    fontWeight = FontWeight.SemiBold,
+    fontWeight = FontWeight.Bold,
     fontSize = 18.sp,
     lineHeight = 24.sp,
   ),
   titleMedium = TextStyle(
     fontFamily = PlusJakartaFontFamily,
-    fontWeight = FontWeight.SemiBold,
+    fontWeight = FontWeight.Bold,
     fontSize = 15.sp,
-    lineHeight = 22.sp,
+    lineHeight = 21.sp,
   ),
   titleSmall = TextStyle(
     fontFamily = PlusJakartaFontFamily,
@@ -89,11 +91,11 @@ val BluePulseTypography = Typography(
     fontFamily = PlusJakartaFontFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 12.sp,
-    lineHeight = 16.sp,
+    lineHeight = 17.sp,
   ),
   labelLarge = TextStyle(
     fontFamily = PlusJakartaFontFamily,
-    fontWeight = FontWeight.SemiBold,
+    fontWeight = FontWeight.Bold,
     fontSize = 13.sp,
     lineHeight = 18.sp,
   ),

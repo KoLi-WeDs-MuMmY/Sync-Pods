@@ -2,6 +2,8 @@ package com.example.ui
 
 import android.app.Application
 import android.content.Intent
+import android.content.IntentSender
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.audio.AudioSyncDspEngine
@@ -12,11 +14,18 @@ import com.example.data.AppPreferencesRepository
 import com.example.data.BluePulseDatabase
 import com.example.data.BluetoothAudioRepository
 import com.example.data.DeviceProfileEntity
+import com.example.model.AudioOutputSink
 import com.example.model.BluetoothDeviceUiModel
+import com.example.model.BondStatus
 import com.example.model.CalibrationMode
+import com.example.model.CodecInfo
+import com.example.model.DeviceCategory
+import com.example.model.DualAudioRouteMode
 import com.example.model.DualSyncState
 import com.example.model.EqBandUiModel
+import com.example.model.FeatureGuideId
 import com.example.model.FloatingIslandEvent
+import com.example.model.MediaPlaybackState
 import com.example.model.PermissionStatus
 import com.example.model.RssiSample
 import com.example.overlay.FloatingIslandEventBus
@@ -44,10 +53,12 @@ data class MainUiState(
   val isBluetoothEnabled: Boolean = false,
   val isScanning: Boolean = false,
   val devices: List<BluetoothDeviceUiModel> = emptyList(),
+  val availableAudioSinks: List<AudioOutputSink> = emptyList(),
   val rssiHistory: Map<String, List<RssiSample>> = emptyMap(),
   val radarTargetAddress: String? = null,
   val selectedEqDeviceAddress: String? = null,
   val dualSync: DualSyncState = DualSyncState(),
+  val mediaPlayback: MediaPlaybackState = MediaPlaybackState(),
   val eqBands: List<EqBandUiModel> = AudioSyncDspEngine.defaultBands(),
   val activeEqPreset: String = "Studio Flat",
   val bassBoostStrength: Int = 150,
@@ -61,6 +72,8 @@ data class MainUiState(
   val isIslandExpanded: Boolean = false,
   val showPermissionSheet: Boolean = false,
   val showSettingsDialog: Boolean = false,
+  val activeFeatureGuide: FeatureGuideId? = null,
+  val active3DModalDevice: BluetoothDeviceUiModel? = null,
   val statusMessage: String? = null,
 )
 
@@ -70,6 +83,7 @@ private data class HardwareSnapshot(
   val btEnabled: Boolean,
   val scanning: Boolean,
   val devices: List<BluetoothDeviceUiModel>,
+  val sinks: List<AudioOutputSink>,
   val rssiHistory: Map<String, List<RssiSample>>,
   val leAudioSupported: Boolean,
   val leBroadcastSupported: Boolean,
@@ -80,6 +94,7 @@ private data class DspSnapshot(
   val hardwareAttached: Boolean,
   val playingCalibration: Boolean,
   val beatTick: Int,
+  val mediaPlayback: MediaPlaybackState,
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -102,6 +117,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
   private val permissionStatus = MutableStateFlow(PermissionHelper.getPermissionStatus(appContext))
   private val showPermissionSheet = MutableStateFlow(false)
   private val showSettingsDialog = MutableStateFlow(false)
+  private val activeFeatureGuide = MutableStateFlow<FeatureGuideId?>(null)
+  private val active3DModalDevice = MutableStateFlow<BluetoothDeviceUiModel?>(null)
   private val statusMessage = MutableStateFlow<String?>(null)
   private val activeEqPreset = MutableStateFlow("Studio Flat")
   private val bassBoostStrength = MutableStateFlow(150)
@@ -114,6 +131,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     btController.isBluetoothEnabled,
     btController.isScanning,
     btController.devices,
+    btController.availableAudioSinks,
     btController.rssiHistory,
     btController.leAudioSupported,
     btController.leAudioBroadcastSupported,
@@ -125,9 +143,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
       btEnabled = values[2] as Boolean,
       scanning = values[3] as Boolean,
       devices = values[4] as List<BluetoothDeviceUiModel>,
-      rssiHistory = values[5] as Map<String, List<RssiSample>>,
-      leAudioSupported = values[6] as Boolean,
-      leBroadcastSupported = values[7] as Boolean,
+      sinks = values[5] as List<AudioOutputSink>,
+      rssiHistory = values[6] as Map<String, List<RssiSample>>,
+      leAudioSupported = values[7] as Boolean,
+      leBroadcastSupported = values[8] as Boolean,
     )
   }
 
@@ -136,12 +155,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     dspEngine.dspAttachedToHardware,
     dspEngine.isPlayingCalibration,
     dspEngine.calibrationBeatTick,
-  ) { bands, attached, playing, tick ->
+    dspEngine.mediaPlayback,
+  ) { bands, attached, playing, tick, media ->
     DspSnapshot(
       eqBands = bands,
       hardwareAttached = attached,
       playingCalibration = playing,
       beatTick = tick,
+      mediaPlayback = media,
     )
   }
 
@@ -164,15 +185,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val balance: Float,
   )
 
+  private val modalStateFlow = combine(
+    showPermissionSheet,
+    showSettingsDialog,
+    activeFeatureGuide,
+    active3DModalDevice,
+    statusMessage,
+  ) { perm, settings, guide, modal3D, msg ->
+    ModalSnapshot(perm, settings, guide, modal3D, msg)
+  }
+
+  private data class ModalSnapshot(
+    val permSheet: Boolean,
+    val settingsDlg: Boolean,
+    val featureGuide: FeatureGuideId?,
+    val modal3DDevice: BluetoothDeviceUiModel?,
+    val message: String?,
+  )
+
   private val uiControlsFlow = combine(
     selectedTab,
     radarTargetAddress,
     selectedEqAddress,
     dualSyncState,
     permissionStatus,
-    showPermissionSheet,
-    showSettingsDialog,
-    statusMessage,
+    modalStateFlow,
   ) { values ->
     ControlsSnapshot(
       tab = values[0] as BluePulseTab,
@@ -180,9 +217,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
       eqTarget = values[2] as String?,
       dualSync = values[3] as DualSyncState,
       perms = values[4] as PermissionStatus,
-      permSheet = values[5] as Boolean,
-      settingsDlg = values[6] as Boolean,
-      message = values[7] as String?,
+      modals = values[5] as ModalSnapshot,
     )
   }
 
@@ -192,9 +227,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val eqTarget: String?,
     val dualSync: DualSyncState,
     val perms: PermissionStatus,
-    val permSheet: Boolean,
-    val settingsDlg: Boolean,
-    val message: String?,
+    val modals: ModalSnapshot,
   )
 
   val uiState: StateFlow<MainUiState> = combine(
@@ -216,11 +249,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val eqMeta = values[5] as EqMeta
     val ctrl = values[6] as ControlsSnapshot
 
+    val defaultSinkA = hw.sinks.firstOrNull { it.isBluetooth } ?: hw.sinks.firstOrNull()
+    val defaultSinkB = hw.sinks.firstOrNull { it.id != defaultSinkA?.id && (it.isWiredOrUsb || it.isBluetooth || it.isSpeaker) }
+      ?: hw.sinks.lastOrNull()
+
     val resolvedDualSync = ctrl.dualSync.copy(
       isCalibrationPlaying = dsp.playingCalibration,
       calibrationBeatIndex = dsp.beatTick,
       leAudioSupported = hw.leAudioSupported,
       leAudioBroadcastSupported = hw.leBroadcastSupported,
+      sinkAId = ctrl.dualSync.sinkAId ?: defaultSinkA?.id,
+      sinkBId = ctrl.dualSync.sinkBId ?: defaultSinkB?.id,
       deviceAAddress = ctrl.dualSync.deviceAAddress ?: hw.devices.getOrNull(0)?.address,
       deviceBAddress = ctrl.dualSync.deviceBAddress ?: hw.devices.getOrNull(1)?.address,
     )
@@ -232,10 +271,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
       isBluetoothEnabled = hw.btEnabled,
       isScanning = hw.scanning,
       devices = hw.devices,
+      availableAudioSinks = hw.sinks,
       rssiHistory = hw.rssiHistory,
       radarTargetAddress = ctrl.radarTarget ?: hw.devices.firstOrNull()?.address,
       selectedEqDeviceAddress = ctrl.eqTarget ?: hw.devices.firstOrNull()?.address,
       dualSync = resolvedDualSync,
+      mediaPlayback = dsp.mediaPlayback,
       eqBands = dsp.eqBands,
       activeEqPreset = eqMeta.preset,
       bassBoostStrength = eqMeta.bass,
@@ -247,9 +288,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
       permissions = ctrl.perms,
       activeIslandEvent = island.first,
       isIslandExpanded = island.second,
-      showPermissionSheet = ctrl.permSheet || (!ctrl.perms.bluetoothGranted && !prefs.permissionOnboardingDismissed),
-      showSettingsDialog = ctrl.settingsDlg,
-      statusMessage = ctrl.message,
+      showPermissionSheet = ctrl.modals.permSheet || (!ctrl.perms.bluetoothGranted && !prefs.permissionOnboardingDismissed),
+      showSettingsDialog = ctrl.modals.settingsDlg,
+      activeFeatureGuide = ctrl.modals.featureGuide,
+      active3DModalDevice = ctrl.modals.modal3DDevice,
+      statusMessage = ctrl.modals.message,
     )
   }.stateIn(
     scope = viewModelScope,
@@ -267,6 +310,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     permissionStatus.value = perms
     if (perms.bluetoothGranted) {
       btController.refreshBondedAndConnected()
+    } else {
+      btController.refreshAudioOutputSinks()
     }
     if (perms.overlayGranted && uiState.value.preferences.systemOverlayEnabled) {
       FloatingIslandOverlayService.startIfPermitted(appContext)
@@ -278,6 +323,55 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     if (tab != BluePulseTab.RADAR) {
       btController.stopRssiRadarMonitor()
     }
+  }
+
+  fun openFeatureGuide(id: FeatureGuideId) {
+    activeFeatureGuide.value = id
+  }
+
+  fun closeFeatureGuide() {
+    activeFeatureGuide.value = null
+  }
+
+  fun open3DConnectionModal(device: BluetoothDeviceUiModel?) {
+    val target = device ?: uiState.value.devices.firstOrNull() ?: BluetoothDeviceUiModel(
+      address = "3D-STUDIO-STAGE",
+      name = "Wireless Audio Buds",
+      category = DeviceCategory.EARBUDS,
+      bondStatus = BondStatus.NONE,
+      isConnected = false,
+      isAudioSink = true,
+      isLeAudioSupported = uiState.value.dualSync.leAudioSupported,
+      activeProfile = "Ready to Pair",
+      rssiDbm = -48,
+      batteryPercent = 94,
+      leftBatteryPercent = 94,
+      rightBatteryPercent = 92,
+      caseBatteryPercent = 100,
+      codecInfo = CodecInfo(),
+    )
+    active3DModalDevice.value = target
+  }
+
+  fun close3DConnectionModal() {
+    active3DModalDevice.value = null
+  }
+
+  fun launchCompanionPairing(onChooserIntent: (IntentSender) -> Unit) {
+    if (!PermissionHelper.hasBluetoothPermissions(appContext)) {
+      showPermissionSheet.value = true
+      return
+    }
+    btController.startCompanionPairing(
+      onChooserLauncher = onChooserIntent,
+      onError = { err -> statusMessage.value = err },
+    )
+  }
+
+  fun handleCompanionDeviceSelected(device: android.bluetooth.BluetoothDevice?) {
+    btController.bondDevice(device)
+    btController.refreshBondedAndConnected()
+    statusMessage.value = "Companion device linked"
   }
 
   fun setShowPermissionSheet(show: Boolean) {
@@ -337,6 +431,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   fun pairOrConnectDevice(device: BluetoothDeviceUiModel) {
+    if (device.address == "3D-STUDIO-STAGE") {
+      openSystemBluetoothSettings()
+      return
+    }
     if (!PermissionHelper.hasBluetoothPermissions(appContext)) {
       showPermissionSheet.value = true
       return
@@ -352,10 +450,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
       )
     } else {
-      statusMessage.value = "Opening system Bluetooth to complete pairing for ${device.name}"
-      runCatching {
-        appContext.startActivity(PermissionHelper.createBluetoothSettingsIntent())
-      }
+      statusMessage.value = "Opening system Bluetooth to finish connecting ${device.name}"
+      openSystemBluetoothSettings()
     }
   }
 
@@ -369,13 +465,70 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     return PermissionHelper.createOverlaySettingsIntent(appContext)
   }
 
-  // Dual Output & Latency Calibration Controls
+  // Dual Audio Bridge, Media File Player & Latency Calibration Controls
+  fun setDualRouteMode(mode: DualAudioRouteMode) {
+    dualSyncState.update { curr ->
+      val next = curr.copy(routeMode = mode)
+      pushRoutingToDsp(next)
+      next
+    }
+  }
+
+  fun setMonoMixForSplit(monoMix: Boolean) {
+    dualSyncState.update { curr ->
+      val next = curr.copy(monoMixForSplit = monoMix)
+      pushRoutingToDsp(next)
+      next
+    }
+  }
+
+  fun assignAudioSinkA(sinkId: Int) {
+    dualSyncState.update { curr ->
+      val next = curr.copy(sinkAId = sinkId)
+      pushRoutingToDsp(next)
+      next
+    }
+  }
+
+  fun assignAudioSinkB(sinkId: Int) {
+    dualSyncState.update { curr ->
+      val next = curr.copy(sinkBId = sinkId)
+      pushRoutingToDsp(next)
+      next
+    }
+  }
+
   fun assignDeviceA(address: String) {
-    dualSyncState.update { it.copy(deviceAAddress = address) }
+    val savedOffset = uiState.value.savedProfiles.firstOrNull { it.address == address }?.latencyOffsetMs
+    dualSyncState.update { curr ->
+      val next = curr.copy(
+        deviceAAddress = address,
+        deviceALatencyMs = savedOffset ?: curr.deviceALatencyMs,
+      )
+      pushDspCalibrationParams(next)
+      next
+    }
   }
 
   fun assignDeviceB(address: String) {
-    dualSyncState.update { it.copy(deviceBAddress = address) }
+    val savedOffset = uiState.value.savedProfiles.firstOrNull { it.address == address }?.latencyOffsetMs
+    dualSyncState.update { curr ->
+      val next = curr.copy(
+        deviceBAddress = address,
+        deviceBLatencyMs = savedOffset ?: curr.deviceBLatencyMs,
+      )
+      pushDspCalibrationParams(next)
+      next
+    }
+  }
+
+  fun loadAudioFile(uri: Uri) {
+    dspEngine.loadAudioFile(uri)
+    statusMessage.value = "Loaded track into Dual Audio Engine"
+  }
+
+  fun clearAudioFile() {
+    dspEngine.clearCustomAudioFile()
   }
 
   fun setDualLinked(linked: Boolean) {
@@ -509,8 +662,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   fun toggleCalibrationTone() {
-    pushDspCalibrationParams(dualSyncState.value)
+    val stateNow = uiState.value.dualSync
+    pushRoutingToDsp(stateNow)
+    pushDspCalibrationParams(stateNow)
     dspEngine.toggleCalibrationTone()
+  }
+
+  private fun pushRoutingToDsp(state: DualSyncState) {
+    dspEngine.updateDualRouting(
+      routeMode = state.routeMode,
+      monoMixForSplit = state.monoMixForSplit,
+      sinkA = btController.findAudioDeviceInfoById(state.sinkAId),
+      sinkB = btController.findAudioDeviceInfoById(state.sinkBId),
+    )
   }
 
   private fun pushDspCalibrationParams(state: DualSyncState) {

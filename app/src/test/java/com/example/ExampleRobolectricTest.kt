@@ -8,6 +8,13 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.AppPreferences
+import com.example.model.AudioOutputSink
+import com.example.model.BluetoothDeviceUiModel
+import com.example.model.BondStatus
+import com.example.model.CodecInfo
+import com.example.model.DeviceCategory
+import com.example.model.DualAudioRouteMode
+import com.example.model.FeatureGuideId
 import com.example.model.FloatingIslandEvent
 import com.example.model.PermissionStatus
 import com.example.ui.BluePulseApp
@@ -36,7 +43,7 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun `amoled theme badge and floating island render cleanly`() {
+  fun `expressive redesign dock, floating island, dual bridge, 3d modal, and guide sheet work`() {
     var currentTab = BluePulseTab.HUB
     var themeMode = ThemeMode.AMOLED
     var islandEvent: FloatingIslandEvent? = FloatingIslandEvent.DeviceConnected(
@@ -44,11 +51,56 @@ class ExampleRobolectricTest {
       batteryPercent = 92,
       codecLabel = "LDAC",
     )
+    var active3DDevice: BluetoothDeviceUiModel? = null
+    var activeGuide: FeatureGuideId? = null
+    var selectedRouteMode = DualAudioRouteMode.BT_PLUS_WIRED_USB
+
+    val sampleBuds = BluetoothDeviceUiModel(
+      address = "AA:BB:CC:DD:EE:01",
+      name = "Studio Buds Pro",
+      category = DeviceCategory.EARBUDS,
+      bondStatus = BondStatus.BONDED,
+      isConnected = true,
+      isAudioSink = true,
+      isLeAudioSupported = false,
+      activeProfile = "A2DP High-Res",
+      rssiDbm = -49,
+      batteryPercent = 92,
+      leftBatteryPercent = 92,
+      rightBatteryPercent = 90,
+      caseBatteryPercent = 100,
+      codecInfo = CodecInfo(codecName = "LDAC"),
+    )
+
+    val sampleSinks = listOf(
+      AudioOutputSink(
+        id = 1,
+        name = "Studio Buds Pro",
+        typeLabel = "Bluetooth A2DP",
+        address = "AA:BB:CC:DD:EE:01",
+        isBluetooth = true,
+        isScoOrComm = false,
+        isWiredOrUsb = false,
+        isSpeaker = false,
+      ),
+      AudioOutputSink(
+        id = 2,
+        name = "USB-C DAC",
+        typeLabel = "USB-C Audio",
+        address = "",
+        isBluetooth = false,
+        isScoOrComm = false,
+        isWiredOrUsb = true,
+        isSpeaker = false,
+      ),
+    )
 
     composeTestRule.setContent {
       BluePulseApp(
         state = MainUiState(
           selectedTab = currentTab,
+          devices = listOf(sampleBuds),
+          availableAudioSinks = sampleSinks,
           preferences = AppPreferences(
             themeMode = themeMode,
             permissionOnboardingDismissed = true,
@@ -61,10 +113,17 @@ class ExampleRobolectricTest {
           activeIslandEvent = islandEvent,
           isIslandExpanded = false,
           showPermissionSheet = false,
+          active3DModalDevice = active3DDevice,
+          activeFeatureGuide = activeGuide,
         ),
         onSelectTab = { currentTab = it },
         onToggleScan = {},
         onRefreshDevices = {},
+        onLaunchCompanionPair = {},
+        onOpen3DModal = { active3DDevice = it ?: sampleBuds },
+        onClose3DModal = { active3DDevice = null },
+        onOpenFeatureGuide = { activeGuide = it },
+        onCloseFeatureGuide = { activeGuide = null },
         onPairOrConnect = {},
         onOpenSystemBt = {},
         onRequestBluetoothPermissions = {},
@@ -79,6 +138,12 @@ class ExampleRobolectricTest {
         onToggleIslandExpanded = {},
         onDismissIsland = { islandEvent = null },
         onClearStatusMessage = {},
+        onSetDualRouteMode = { selectedRouteMode = it },
+        onSetMonoMixSplit = {},
+        onAssignSinkA = {},
+        onAssignSinkB = {},
+        onPickAudioFile = {},
+        onClearAudioFile = {},
         onSetDualLinked = {},
         onMasterVolumeChange = {},
         onAssignDeviceA = {},
@@ -104,6 +169,17 @@ class ExampleRobolectricTest {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("AMOLED").assertIsDisplayed()
     composeTestRule.onNodeWithTag("floating_island_pill").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("floating_pill_dock").assertIsDisplayed()
+
+    // Trigger (i) Feature Guide button on Hub
+    composeTestRule.onNodeWithTag("hub_info_btn").performClick()
+    assertEquals(FeatureGuideId.HUB_PAIRING, activeGuide)
+
+    // Trigger 3D Rotating Earbuds Pop-Up modal button
+    composeTestRule.onNodeWithTag("hub_3d_popup_button").performClick()
+    assertEquals("Studio Buds Pro", active3DDevice?.name)
+
+    // Navigate to Dual Sync using the Expressive Floating Pill Dock
     composeTestRule.onNodeWithTag("nav_tab_dual_sync").performClick()
     assertEquals(BluePulseTab.DUAL_SYNC, currentTab)
   }

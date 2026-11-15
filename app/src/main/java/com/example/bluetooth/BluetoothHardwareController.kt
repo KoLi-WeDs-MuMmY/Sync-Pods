@@ -14,17 +14,23 @@ import android.bluetooth.BluetoothStatusCodes
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.companion.AssociationRequest
+import android.companion.BluetoothDeviceFilter
+import android.companion.CompanionDeviceManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.IntentSender
 import android.content.pm.PackageManager
+import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
 import android.os.ParcelUuid
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.example.model.AudioOutputSink
 import com.example.model.BluetoothDeviceUiModel
 import com.example.model.BondStatus
 import com.example.model.CodecInfo
@@ -78,6 +84,9 @@ class BluetoothHardwareController(private val context: Context) {
   private val _devices = MutableStateFlow<List<BluetoothDeviceUiModel>>(emptyList())
   val devices: StateFlow<List<BluetoothDeviceUiModel>> = _devices.asStateFlow()
 
+  private val _availableAudioSinks = MutableStateFlow<List<AudioOutputSink>>(emptyList())
+  val availableAudioSinks: StateFlow<List<AudioOutputSink>> = _availableAudioSinks.asStateFlow()
+
   private val _rssiHistory = MutableStateFlow<Map<String, List<RssiSample>>>(emptyMap())
   val rssiHistory: StateFlow<Map<String, List<RssiSample>>> = _rssiHistory.asStateFlow()
 
@@ -91,6 +100,18 @@ class BluetoothHardwareController(private val context: Context) {
 
   private val batteryServiceUuid = UUID.fromString("0000180f-0000-1000-8000-00805f9b34fb")
   private val batteryLevelCharUuid = UUID.fromString("00002a19-0000-1000-8000-00805f9b34fb")
+
+  private val audioDeviceCallback = object : AudioDeviceCallback() {
+    override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) {
+      refreshAudioOutputSinks()
+      refreshBondedAndConnected()
+    }
+
+    override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
+      refreshAudioOutputSinks()
+      refreshBondedAndConnected()
+    }
+  }
 
   private val leScanCallback = object : ScanCallback() {
     override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -144,6 +165,7 @@ class BluetoothHardwareController(private val context: Context) {
         }
         BluetoothDevice.ACTION_ACL_CONNECTED -> {
           val device = getParcelableDevice(intent) ?: return
+          refreshAudioOutputSinks()
           refreshBondedAndConnected()
           val name = safeDeviceName(device)
           val battery = readBatteryViaReflection(device)
@@ -158,12 +180,14 @@ class BluetoothHardwareController(private val context: Context) {
         }
         BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
           val device = getParcelableDevice(intent) ?: return
+          refreshAudioOutputSinks()
           refreshBondedAndConnected()
           FloatingIslandEventBus.postEvent(
             FloatingIslandEvent.DeviceDisconnected(deviceName = safeDeviceName(device))
           )
         }
         BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED -> {
+          refreshAudioOutputSinks()
           refreshBondedAndConnected()
         }
         ACTION_BATTERY_LEVEL_CHANGED -> {
@@ -202,10 +226,12 @@ class BluetoothHardwareController(private val context: Context) {
         filter,
         ContextCompat.RECEIVER_EXPORTED,
       )
+      audioManager?.registerAudioDeviceCallback(audioDeviceCallback, null)
       receiversRegistered = true
     }
 
     initA2dpProxy()
+    refreshAudioOutputSinks()
     refreshBondedAndConnected()
   }
 
@@ -214,12 +240,133 @@ class BluetoothHardwareController(private val context: Context) {
     stopRssiRadarMonitor()
     if (receiversRegistered) {
       runCatching { context.unregisterReceiver(btReceiver) }
+      runCatching { audioManager?.unregisterAudioDeviceCallback(audioDeviceCallback) }
       receiversRegistered = false
     }
     a2dpProxy?.let { proxy ->
       runCatching { adapter?.closeProfileProxy(BluetoothProfile.A2DP, proxy) }
     }
     a2dpProxy = null
+  }
+
+  fun refreshAudioOutputSinks() {
+    val am = audioManager ?: return
+    val outputs = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+    val mapped = outputs.mapNotNull { info ->
+      val typeLabel = when (info.type) {
+        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> "Bluetooth A2DP"
+        AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> "Bluetooth SCO"
+        AudioDeviceInfo.TYPE_WIRED_HEADSET,
+        AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> "3.5mm Wired"
+        AudioDeviceInfo.TYPE_USB_HEADSET,
+        AudioDeviceInfo.TYPE_USB_DEVICE -> "USB-C Audio"
+        AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "Phone Speaker"
+        else -> when {
+          Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            (info.type == AudioDeviceInfo.TYPE_BLE_HEADSET || info.type == AudioDeviceInfo.TYPE_BLE_SPEAKER) ->
+            "BLE Audio"
+          Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            info.type == AudioDeviceInfo.TYPE_BLE_BROADCAST ->
+            "Auracast"
+          else -> null
+        }
+      } ?: return@mapNotNull null
+
+      val isBt = info.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+        info.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+        (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+          (info.type == AudioDeviceInfo.TYPE_BLE_HEADSET || info.type == AudioDeviceInfo.TYPE_BLE_SPEAKER))
+
+      val isWired = info.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+        info.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+        info.type == AudioDeviceInfo.TYPE_USB_HEADSET ||
+        info.type == AudioDeviceInfo.TYPE_USB_DEVICE
+
+      val address = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) info.address else ""
+      val rawName = info.productName?.toString()?.takeIf { it.isNotBlank() } ?: typeLabel
+
+      AudioOutputSink(
+        id = info.id,
+        name = rawName,
+        typeLabel = typeLabel,
+        address = address,
+        isBluetooth = isBt,
+        isScoOrComm = info.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+        isWiredOrUsb = isWired,
+        isSpeaker = info.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER,
+      )
+    }
+    _availableAudioSinks.value = mapped
+  }
+
+  fun findAudioDeviceInfoById(id: Int?): AudioDeviceInfo? {
+    if (id == null) return null
+    return audioManager?.getDevices(AudioManager.GET_DEVICES_OUTPUTS)?.firstOrNull { it.id == id }
+  }
+
+  fun startCompanionPairing(
+    onChooserLauncher: (IntentSender) -> Unit,
+    onError: (String) -> Unit,
+  ) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+      onError("Companion Device Pairing requires Android 8.0+")
+      return
+    }
+    val cdm = context.getSystemService(Context.COMPANION_DEVICE_SERVICE) as? CompanionDeviceManager
+    if (cdm == null) {
+      onError("Companion Device service unavailable")
+      return
+    }
+
+    val request = AssociationRequest.Builder()
+      .addDeviceFilter(BluetoothDeviceFilter.Builder().build())
+      .setSingleDevice(false)
+      .build()
+
+    runCatching {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        cdm.associate(
+          request,
+          context.mainExecutor,
+          object : CompanionDeviceManager.Callback() {
+            override fun onAssociationPending(intentSender: IntentSender) {
+              onChooserLauncher(intentSender)
+            }
+
+            override fun onFailure(error: CharSequence?) {
+              onError(error?.toString() ?: "Companion pairing canceled")
+            }
+          },
+        )
+      } else {
+        @Suppress("DEPRECATION")
+        cdm.associate(
+          request,
+          object : CompanionDeviceManager.Callback() {
+            override fun onDeviceFound(chooserLauncher: IntentSender) {
+              onChooserLauncher(chooserLauncher)
+            }
+
+            override fun onFailure(error: CharSequence?) {
+              onError(error?.toString() ?: "Companion pairing canceled")
+            }
+          },
+          null,
+        )
+      }
+    }.onFailure { err ->
+      onError(err.message ?: "Unable to launch Companion pairing")
+    }
+  }
+
+  @SuppressLint("MissingPermission")
+  fun bondDevice(device: BluetoothDevice?) {
+    if (device == null || !PermissionHelper.hasBluetoothPermissions(context)) return
+    runCatching {
+      if (device.bondState == BluetoothDevice.BOND_NONE) {
+        device.createBond()
+      }
+    }
   }
 
   private fun initA2dpProxy() {
@@ -253,6 +400,7 @@ class BluetoothHardwareController(private val context: Context) {
     _isBluetoothEnabled.value = safeIsEnabled()
     _leAudioSupported.value = checkLeAudioSupported()
     _leAudioBroadcastSupported.value = checkLeAudioBroadcastSupported()
+    refreshAudioOutputSinks()
 
     val btAdapter = adapter ?: return
     if (!PermissionHelper.hasBluetoothPermissions(context)) {
@@ -370,7 +518,6 @@ class BluetoothHardwareController(private val context: Context) {
           device.createBond()
         }
         BluetoothDevice.BOND_BONDED -> {
-          // Attempt A2DP/GATT connect and also read battery via GATT
           connectGattForTelemetry(address)
           invokeA2dpConnect(device)
         }
@@ -386,7 +533,7 @@ class BluetoothHardwareController(private val context: Context) {
   fun startRssiRadarMonitor(address: String) {
     stopRssiRadarMonitor()
     if (!PermissionHelper.hasBluetoothPermissions(context)) return
-    val device = rawDeviceMap[address] ?: return
+    if (rawDeviceMap[address] == null) return
 
     connectGattForTelemetry(address)
 
@@ -396,7 +543,7 @@ class BluetoothHardwareController(private val context: Context) {
         if (gatt != null) {
           runCatching { gatt.readRemoteRssi() }
         }
-        delay(900L)
+        delay(850L)
       }
     }
   }

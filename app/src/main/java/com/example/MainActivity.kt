@@ -1,10 +1,16 @@
 package com.example
 
+import android.app.Activity
+import android.bluetooth.BluetoothDevice
+import android.companion.CompanionDeviceManager
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
@@ -41,11 +47,43 @@ class MainActivity : ComponentActivity() {
         viewModel.refreshPermissionsAndServices()
       }
 
+      val companionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult(),
+      ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+          val selectedDevice = extractCompanionDevice(result.data)
+          viewModel.handleCompanionDeviceSelected(selectedDevice)
+        }
+      }
+
+      val audioFilePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+      ) { uri ->
+        if (uri != null) {
+          runCatching {
+            contentResolver.takePersistableUriPermission(
+              uri,
+              Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+          }
+          viewModel.loadAudioFile(uri)
+        }
+      }
+
       BluePulseApp(
         state = state,
         onSelectTab = viewModel::selectTab,
         onToggleScan = viewModel::toggleScan,
         onRefreshDevices = viewModel::refreshDevices,
+        onLaunchCompanionPair = {
+          viewModel.launchCompanionPairing { intentSender ->
+            companionLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
+          }
+        },
+        onOpen3DModal = viewModel::open3DConnectionModal,
+        onClose3DModal = viewModel::close3DConnectionModal,
+        onOpenFeatureGuide = viewModel::openFeatureGuide,
+        onCloseFeatureGuide = viewModel::closeFeatureGuide,
         onPairOrConnect = viewModel::pairOrConnectDevice,
         onOpenSystemBt = viewModel::openSystemBluetoothSettings,
         onRequestBluetoothPermissions = {
@@ -71,6 +109,12 @@ class MainActivity : ComponentActivity() {
         onToggleIslandExpanded = viewModel::toggleIslandExpanded,
         onDismissIsland = viewModel::dismissIsland,
         onClearStatusMessage = viewModel::clearStatusMessage,
+        onSetDualRouteMode = viewModel::setDualRouteMode,
+        onSetMonoMixSplit = viewModel::setMonoMixForSplit,
+        onAssignSinkA = viewModel::assignAudioSinkA,
+        onAssignSinkB = viewModel::assignAudioSinkB,
+        onPickAudioFile = { audioFilePickerLauncher.launch(arrayOf("audio/*")) },
+        onClearAudioFile = viewModel::clearAudioFile,
         onSetDualLinked = viewModel::setDualLinked,
         onMasterVolumeChange = viewModel::updateMasterVolume,
         onAssignDeviceA = viewModel::assignDeviceA,
@@ -91,6 +135,16 @@ class MainActivity : ComponentActivity() {
         onBassVirtualizerBalanceChange = viewModel::updateBassAndVirtualizer,
         onUpdateAutoRules = viewModel::updateAutoConnectRule,
       )
+    }
+  }
+
+  @Suppress("DEPRECATION")
+  private fun extractCompanionDevice(data: Intent?): BluetoothDevice? {
+    if (data == null) return null
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      data.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE, BluetoothDevice::class.java)
+    } else {
+      data.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE)
     }
   }
 

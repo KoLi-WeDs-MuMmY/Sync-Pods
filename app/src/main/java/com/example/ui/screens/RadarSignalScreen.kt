@@ -31,12 +31,14 @@ import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Radar
 import androidx.compose.material.icons.rounded.Sensors
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,9 +56,12 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.model.BluetoothDeviceUiModel
+import com.example.model.FeatureGuideId
 import com.example.model.RssiSample
 import com.example.ui.MainUiState
 import com.example.ui.MainViewModel
+import com.example.ui.components.ExpressiveInfoButton
+import com.example.ui.components.ScallopedExpressiveRing
 import com.example.ui.theme.LocalBluePulseColors
 import kotlin.math.cos
 import kotlin.math.sin
@@ -67,6 +72,7 @@ fun RadarSignalScreen(
   onSelectTarget: (String) -> Unit,
   onToggleScan: () -> Unit,
   onStopRadar: () -> Unit,
+  onOpenGuide: (FeatureGuideId) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val extended = LocalBluePulseColors.current
@@ -89,12 +95,12 @@ fun RadarSignalScreen(
       modifier = Modifier
         .widthIn(max = 760.dp)
         .fillMaxSize(),
-      contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+      contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 104.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
       item {
         Surface(
-          shape = MaterialTheme.shapes.large,
+          shape = MaterialTheme.shapes.extraLarge,
           color = MaterialTheme.colorScheme.surfaceContainer,
           border = extended.cardBorder,
         ) {
@@ -112,26 +118,41 @@ fun RadarSignalScreen(
               Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f),
               ) {
                 Icon(
                   imageVector = Icons.Rounded.Radar,
                   contentDescription = "Signal Radar",
                   tint = MaterialTheme.colorScheme.primary,
                 )
-                Text("Live RSSI Device Finder", style = MaterialTheme.typography.titleMedium)
+                Text("RSSI Proximity Radar", style = MaterialTheme.typography.headlineSmall)
               }
 
-              Button(
-                onClick = onToggleScan,
-                modifier = Modifier.testTag("radar_scan_toggle"),
-              ) {
-                Icon(
-                  imageVector = Icons.AutoMirrored.Rounded.BluetoothSearching,
-                  contentDescription = null,
-                  modifier = Modifier.size(16.dp),
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                ExpressiveInfoButton(
+                  contentDescription = "How RSSI Proximity Radar Finder works",
+                  testTag = "radar_info_btn",
+                  onClick = { onOpenGuide(FeatureGuideId.RADAR_FINDER) },
                 )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(if (state.isScanning) "Stop" else "Ping")
+                Button(
+                  onClick = onToggleScan,
+                  colors = ButtonDefaults.buttonColors(
+                    containerColor = extended.coralHero,
+                    contentColor = Color.White,
+                  ),
+                  shape = RoundedCornerShape(50),
+                  modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .testTag("radar_scan_toggle"),
+                ) {
+                  Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.BluetoothSearching,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                  )
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text(if (state.isScanning) "Stop" else "Ping")
+                }
               }
             }
 
@@ -174,7 +195,10 @@ fun RadarSignalScreen(
       }
 
       item {
-        CodecInspectorCard(targetDevice = targetDevice)
+        CodecInspectorCard(
+          targetDevice = targetDevice,
+          onOpenGuide = { onOpenGuide(FeatureGuideId.CODEC_INSPECTOR) },
+        )
       }
     }
   }
@@ -208,7 +232,7 @@ private fun RadarSonarCard(
   )
 
   Surface(
-    shape = MaterialTheme.shapes.large,
+    shape = MaterialTheme.shapes.extraLarge,
     color = MaterialTheme.colorScheme.surfaceContainer,
     border = extended.cardBorder,
   ) {
@@ -222,16 +246,24 @@ private fun RadarSonarCard(
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .height(220.dp),
+          .height(236.dp),
         contentAlignment = Alignment.Center,
       ) {
-        Canvas(modifier = Modifier.size(204.dp)) {
+        ScallopedExpressiveRing(
+          isAnimating = isScanning || targetDevice != null,
+          ringColor = signalColor.copy(alpha = 0.65f),
+          trackColor = primary.copy(alpha = 0.14f),
+          size = 224.dp,
+          petals = 14,
+        )
+
+        Canvas(modifier = Modifier.size(196.dp)) {
           val center = Offset(size.width / 2f, size.height / 2f)
           val maxRadius = size.minDimension / 2f
 
-          listOf(0.33f, 0.66f, 1.0f).forEach { factor ->
+          listOf(0.34f, 0.68f, 1.0f).forEach { factor ->
             drawCircle(
-              color = primary.copy(alpha = 0.22f),
+              color = primary.copy(alpha = 0.24f),
               radius = maxRadius * factor,
               center = center,
               style = Stroke(width = 1.5.dp.toPx()),
@@ -265,7 +297,7 @@ private fun RadarSonarCard(
               ),
               start = center,
               end = end,
-              strokeWidth = 3.dp.toPx(),
+              strokeWidth = 3.5.dp.toPx(),
               cap = StrokeCap.Round,
             )
           }
@@ -302,7 +334,7 @@ private fun RadarSonarCard(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
           Text(
             text = targetDevice?.name ?: "No Active Radar Target",
             style = MaterialTheme.typography.titleMedium,
@@ -319,7 +351,10 @@ private fun RadarSonarCard(
         if (targetDevice != null) {
           OutlinedButton(
             onClick = onStopRadar,
-            modifier = Modifier.testTag("radar_stop_track_button"),
+            shape = RoundedCornerShape(50),
+            modifier = Modifier
+              .minimumInteractiveComponentSize()
+              .testTag("radar_stop_track_button"),
           ) {
             Text("Pause")
           }
@@ -363,7 +398,7 @@ private fun RssiWaveformCard(
             contentDescription = "Signal strength history",
             tint = primary,
           )
-          Text("Signal Strength Waveform (dBm)", style = MaterialTheme.typography.titleMedium)
+          Text("Signal Strength Graph (dBm)", style = MaterialTheme.typography.titleMedium)
         }
         Text(
           text = liveRssi?.let { "$it dBm" } ?: "-- dBm",
@@ -407,7 +442,10 @@ private fun RssiWaveformCard(
 }
 
 @Composable
-private fun CodecInspectorCard(targetDevice: BluetoothDeviceUiModel?) {
+private fun CodecInspectorCard(
+  targetDevice: BluetoothDeviceUiModel?,
+  onOpenGuide: () -> Unit,
+) {
   val extended = LocalBluePulseColors.current
   val codec = targetDevice?.codecInfo
 
@@ -423,15 +461,27 @@ private fun CodecInspectorCard(targetDevice: BluetoothDeviceUiModel?) {
       verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
       Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
       ) {
-        Icon(
-          imageVector = Icons.Rounded.GraphicEq,
-          contentDescription = "Audio Codec Inspector",
-          tint = MaterialTheme.colorScheme.secondary,
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+          Icon(
+            imageVector = Icons.Rounded.GraphicEq,
+            contentDescription = "Audio Codec Inspector",
+            tint = MaterialTheme.colorScheme.secondary,
+          )
+          Text("Audio Codec & Link Telemetry", style = MaterialTheme.typography.titleMedium)
+        }
+
+        ExpressiveInfoButton(
+          contentDescription = "How Bluetooth Audio Codec inspection works",
+          testTag = "codec_info_btn",
+          onClick = onOpenGuide,
         )
-        Text("Audio Codec & Link Telemetry", style = MaterialTheme.typography.titleMedium)
       }
 
       if (codec == null) {

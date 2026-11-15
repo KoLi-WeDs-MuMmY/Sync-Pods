@@ -64,13 +64,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.model.FloatingIslandEvent
 import com.example.model.IslandTone
+import com.example.ui.theme.AlertRed
 import com.example.ui.theme.AmberLatency
-import com.example.ui.theme.CoralAlert
-import com.example.ui.theme.CyanElectric
 import com.example.ui.theme.IslandCapsuleBorder
 import com.example.ui.theme.IslandCapsuleSurface
 import com.example.ui.theme.JetBrainsMonoFontFamily
-import com.example.ui.theme.SignalEmerald
+import com.example.ui.theme.LavenderLuminous
+import com.example.ui.theme.MintSignal
 
 @Composable
 fun InAppFloatingIslandHost(
@@ -122,10 +122,10 @@ fun FloatingIslandPillCard(
   modifier: Modifier = Modifier,
 ) {
   val accentColor = when (event.tone) {
-    IslandTone.PRIMARY -> CyanElectric
-    IslandTone.EMERALD -> SignalEmerald
+    IslandTone.PRIMARY -> LavenderLuminous
+    IslandTone.EMERALD -> MintSignal
     IslandTone.AMBER -> AmberLatency
-    IslandTone.ALERT -> CoralAlert
+    IslandTone.ALERT -> AlertRed
   }
 
   val icon = when (event) {
