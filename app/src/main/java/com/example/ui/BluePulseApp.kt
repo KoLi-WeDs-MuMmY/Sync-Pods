@@ -286,6 +286,10 @@ fun BluePulseApp(
                   onLaunchCompanionPair = onLaunchCompanionPair,
                   onOpen3DModal = onOpen3DModal,
                   onPairOrConnect = onPairOrConnect,
+                  onOpenDualSyncTab = { onSelectTab(BluePulseTab.DUAL_SYNC) },
+                  onQuickToggleDualPlay = onToggleCalibrationTone,
+                  onOpenRadarTab = { onSelectTab(BluePulseTab.RADAR) },
+                  onOpenEqTab = { onSelectTab(BluePulseTab.EQ_RULES) },
                   onOpenRadarForDevice = { addr ->
                     onSelectRadarTarget(addr)
                     onSelectTab(BluePulseTab.RADAR)

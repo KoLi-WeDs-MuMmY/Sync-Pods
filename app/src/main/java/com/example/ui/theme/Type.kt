@@ -8,11 +8,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.R
 
-val SpaceGroteskFontFamily = FontFamily(
-  Font(R.font.space_grotesk, FontWeight.Normal),
-  Font(R.font.space_grotesk, FontWeight.Medium),
-  Font(R.font.space_grotesk, FontWeight.SemiBold),
-  Font(R.font.space_grotesk, FontWeight.Bold),
+val FrauncesFontFamily = FontFamily(
+  Font(R.font.fraunces, FontWeight.Normal),
+  Font(R.font.fraunces, FontWeight.Medium),
+  Font(R.font.fraunces, FontWeight.SemiBold),
+  Font(R.font.fraunces, FontWeight.Bold),
+)
+
+val BarlowCondensedFontFamily = FontFamily(
+  Font(R.font.barlow_condensed, FontWeight.Normal),
+  Font(R.font.barlow_condensed, FontWeight.Medium),
+  Font(R.font.barlow_condensed, FontWeight.SemiBold),
+  Font(R.font.barlow_condensed, FontWeight.Bold),
 )
 
 val PlusJakartaFontFamily = FontFamily(
@@ -28,46 +35,71 @@ val JetBrainsMonoFontFamily = FontFamily(
   Font(R.font.jetbrains_mono, FontWeight.Bold),
 )
 
+// Giant condensed metric style inspired by Material 3 Expressive numeric displays
+val CondensedHeroMetricStyle = TextStyle(
+  fontFamily = BarlowCondensedFontFamily,
+  fontWeight = FontWeight.Bold,
+  fontSize = 44.sp,
+  lineHeight = 46.sp,
+  letterSpacing = (-0.5).sp,
+  fontFeatureSettings = "tnum",
+)
+
+val CondensedMediumMetricStyle = TextStyle(
+  fontFamily = BarlowCondensedFontFamily,
+  fontWeight = FontWeight.Bold,
+  fontSize = 30.sp,
+  lineHeight = 32.sp,
+  fontFeatureSettings = "tnum",
+)
+
 val BluePulseTypography = Typography(
-  displayMedium = TextStyle(
-    fontFamily = SpaceGroteskFontFamily,
+  displayLarge = TextStyle(
+    fontFamily = FrauncesFontFamily,
     fontWeight = FontWeight.Bold,
-    fontSize = 38.sp,
+    fontSize = 40.sp,
     lineHeight = 42.sp,
-    letterSpacing = (-1.1).sp,
+    letterSpacing = (-1.2).sp,
+  ),
+  displayMedium = TextStyle(
+    fontFamily = FrauncesFontFamily,
+    fontWeight = FontWeight.Bold,
+    fontSize = 34.sp,
+    lineHeight = 36.sp,
+    letterSpacing = (-0.9).sp,
   ),
   displaySmall = TextStyle(
-    fontFamily = SpaceGroteskFontFamily,
+    fontFamily = FrauncesFontFamily,
     fontWeight = FontWeight.Bold,
-    fontSize = 30.sp,
-    lineHeight = 34.sp,
-    letterSpacing = (-0.8).sp,
+    fontSize = 28.sp,
+    lineHeight = 32.sp,
+    letterSpacing = (-0.6).sp,
   ),
   headlineMedium = TextStyle(
-    fontFamily = SpaceGroteskFontFamily,
+    fontFamily = FrauncesFontFamily,
     fontWeight = FontWeight.Bold,
     fontSize = 24.sp,
-    lineHeight = 29.sp,
-    letterSpacing = (-0.5).sp,
+    lineHeight = 28.sp,
+    letterSpacing = (-0.4).sp,
   ),
   headlineSmall = TextStyle(
-    fontFamily = SpaceGroteskFontFamily,
+    fontFamily = FrauncesFontFamily,
     fontWeight = FontWeight.Bold,
-    fontSize = 20.sp,
-    lineHeight = 26.sp,
+    fontSize = 21.sp,
+    lineHeight = 25.sp,
     letterSpacing = (-0.2).sp,
   ),
   titleLarge = TextStyle(
-    fontFamily = SpaceGroteskFontFamily,
+    fontFamily = PlusJakartaFontFamily,
     fontWeight = FontWeight.Bold,
     fontSize = 18.sp,
-    lineHeight = 24.sp,
+    lineHeight = 23.sp,
   ),
   titleMedium = TextStyle(
     fontFamily = PlusJakartaFontFamily,
     fontWeight = FontWeight.Bold,
     fontSize = 15.sp,
-    lineHeight = 21.sp,
+    lineHeight = 20.sp,
   ),
   titleSmall = TextStyle(
     fontFamily = PlusJakartaFontFamily,

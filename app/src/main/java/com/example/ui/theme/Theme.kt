@@ -18,12 +18,27 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
 @Immutable
+data class BentoTilePalette(
+  val lavenderBg: Color = BentoLavenderBg,
+  val lavenderInk: Color = BentoLavenderInk,
+  val coralBg: Color = BentoCoralBg,
+  val coralInk: Color = BentoCoralInk,
+  val limeBg: Color = BentoLimeBg,
+  val limeInk: Color = BentoLimeInk,
+  val cyanBg: Color = BentoCyanBg,
+  val cyanInk: Color = BentoCyanInk,
+  val plumBg: Color = BentoPlumBg,
+  val plumInk: Color = BentoPlumInk,
+)
+
+@Immutable
 data class BluePulseExtendedColors(
   val signalGood: Color,
   val signalWarn: Color,
   val signalBad: Color,
   val coralHero: Color,
   val coralContainer: Color,
+  val bento: BentoTilePalette,
   val isAmoled: Boolean,
   val cardBorder: BorderStroke?,
 )
@@ -35,6 +50,7 @@ val LocalBluePulseColors = staticCompositionLocalOf {
     signalBad = AlertRed,
     coralHero = CoralExpressive,
     coralContainer = CoralContainerDark,
+    bento = BentoTilePalette(),
     isAmoled = true,
     cardBorder = BorderStroke(1.dp, AmoledOutlineVariant),
   )
@@ -131,10 +147,10 @@ private val AmoledColorScheme = darkColorScheme(
 )
 
 val BluePulseShapes = Shapes(
-  small = RoundedCornerShape(14.dp),
-  medium = RoundedCornerShape(22.dp),
-  large = RoundedCornerShape(28.dp),
-  extraLarge = RoundedCornerShape(34.dp),
+  small = RoundedCornerShape(16.dp),
+  medium = RoundedCornerShape(24.dp),
+  large = RoundedCornerShape(30.dp),
+  extraLarge = RoundedCornerShape(36.dp),
 )
 
 @Composable
@@ -155,6 +171,13 @@ fun BluePulseTheme(
       signalBad = AlertRed,
       coralHero = CoralExpressive,
       coralContainer = CoralContainerLight,
+      bento = BentoTilePalette(
+        lavenderBg = Color(0xFFE6CEFF),
+        coralBg = Color(0xFFFF9AA6),
+        limeBg = Color(0xFFE2FF8A),
+        cyanBg = Color(0xFF9DF0FF),
+        plumBg = Color(0xFF4B2384),
+      ),
       isAmoled = false,
       cardBorder = BorderStroke(1.dp, LightOutlineVariant),
     )
@@ -164,6 +187,7 @@ fun BluePulseTheme(
       signalBad = AlertRed,
       coralHero = CoralExpressive,
       coralContainer = CoralContainerDark,
+      bento = BentoTilePalette(),
       isAmoled = false,
       cardBorder = BorderStroke(1.dp, PlumDarkOutlineVariant),
     )
@@ -173,6 +197,9 @@ fun BluePulseTheme(
       signalBad = AlertRed,
       coralHero = CoralExpressive,
       coralContainer = CoralContainerDark,
+      bento = BentoTilePalette(
+        plumBg = Color(0xFF2B124F),
+      ),
       isAmoled = true,
       cardBorder = BorderStroke(1.dp, AmoledOutlineVariant),
     )

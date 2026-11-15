@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoMode
 import androidx.compose.material.icons.rounded.BatteryChargingFull
-import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -29,13 +31,20 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.example.R
 import com.example.audio.AudioSyncDspEngine
 import com.example.data.DeviceProfileEntity
 import com.example.model.FeatureGuideId
 import com.example.ui.MainUiState
+import com.example.ui.components.AnimatedSpectrumBars
 import com.example.ui.components.ExpressiveInfoButton
+import com.example.ui.theme.CondensedMediumMetricStyle
 import com.example.ui.theme.LocalBluePulseColors
 import kotlin.math.roundToInt
 
@@ -51,6 +60,7 @@ fun EqRulesScreen(
   modifier: Modifier = Modifier,
 ) {
   val extended = LocalBluePulseColors.current
+  val bento = extended.bento
   val selectedAddress = state.selectedEqDeviceAddress ?: "DEFAULT_PROFILE"
   val selectedDevice = state.devices.firstOrNull { it.address == selectedAddress }
   val selectedDeviceName = selectedDevice?.name ?: "Default Audio Profile"
@@ -65,88 +75,128 @@ fun EqRulesScreen(
       modifier = Modifier
         .widthIn(max = 760.dp)
         .fillMaxSize(),
-      contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 104.dp),
+      contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 108.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+      // 1. Editorial Sound Sculptor Hero Card with Studio EQ Art & Live Dancing Bars
       item {
         Surface(
           shape = MaterialTheme.shapes.extraLarge,
-          color = MaterialTheme.colorScheme.surfaceContainer,
-          border = extended.cardBorder,
+          color = bento.plumBg,
+          contentColor = bento.plumInk,
         ) {
-          Column(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-          ) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically,
+          Column(modifier = Modifier.fillMaxWidth()) {
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .height(166.dp),
             ) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.weight(1f),
-              ) {
-                Icon(
-                  imageVector = Icons.Rounded.GraphicEq,
-                  contentDescription = "Per-device Equalizer",
-                  tint = MaterialTheme.colorScheme.primary,
-                )
-                Column {
-                  Text("Per-Device EQ & Rules", style = MaterialTheme.typography.headlineSmall)
-                  Text(
-                    text = if (state.dspHardwareAttached) {
-                      "Session DSP Live • $selectedDeviceName"
-                    } else {
-                      "Software DSP + Room Saved • $selectedDeviceName"
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (state.dspHardwareAttached) {
-                      extended.signalGood
-                    } else {
-                      MaterialTheme.colorScheme.primary
-                    },
-                  )
-                }
-              }
-
-              ExpressiveInfoButton(
-                contentDescription = "How audible 5-band EQ and auto-connect rules work",
-                testTag = "eq_info_btn",
-                onClick = { onOpenGuide(FeatureGuideId.EQUALIZER_RULES) },
+              Image(
+                painter = painterResource(id = R.drawable.img_eq_studio_art),
+                contentDescription = "Studio Equalizer Prism & Wireless Earbuds",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
               )
-            }
+              Box(
+                modifier = Modifier
+                  .fillMaxSize()
+                  .background(
+                    Brush.verticalGradient(
+                      colors = listOf(
+                        bento.plumBg.copy(alpha = 0.45f),
+                        bento.plumBg.copy(alpha = 0.94f),
+                      )
+                    )
+                  ),
+              )
+              Column(
+                modifier = Modifier
+                  .fillMaxSize()
+                  .padding(16.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+              ) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically,
+                ) {
+                  Surface(
+                    shape = RoundedCornerShape(50),
+                    color = bento.cyanBg,
+                  ) {
+                    Text(
+                      text = if (state.dspHardwareAttached) {
+                        "DSP LIVE • $selectedDeviceName"
+                      } else {
+                        "SOFTWARE DSP • $selectedDeviceName"
+                      },
+                      style = MaterialTheme.typography.labelSmall,
+                      color = bento.cyanInk,
+                      modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    )
+                  }
 
-            if (state.devices.isNotEmpty()) {
-              LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(state.devices, key = { it.address }) { dev ->
-                  FilterChip(
-                    selected = dev.address == selectedAddress,
-                    onClick = { onSelectEqDevice(dev.address) },
-                    label = { Text(dev.name) },
-                    modifier = Modifier.testTag("eq_device_chip_${dev.address}"),
+                  ExpressiveInfoButton(
+                    contentDescription = "How audible 5-band EQ and auto-connect rules work",
+                    testTag = "eq_info_btn",
+                    tint = Color.White,
+                    onClick = { onOpenGuide(FeatureGuideId.EQUALIZER_RULES) },
+                  )
+                }
+
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.Bottom,
+                ) {
+                  Text(
+                    text = "Sound Sculptor",
+                    style = MaterialTheme.typography.displaySmall,
+                    color = Color.White,
+                  )
+                  AnimatedSpectrumBars(
+                    bands = state.eqBands,
+                    isPlaying = state.dualSync.isCalibrationPlaying,
+                    barColor = bento.cyanBg,
+                    modifier = Modifier.widthIn(min = 84.dp, max = 110.dp),
                   )
                 }
               }
             }
 
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-              items(AudioSyncDspEngine.PRESETS.keys.toList()) { preset ->
-                FilterChip(
-                  selected = state.activeEqPreset == preset,
-                  onClick = { onApplyPreset(preset) },
-                  label = { Text(preset) },
-                  modifier = Modifier.testTag("eq_preset_${preset.lowercase().replace(" ", "_")}"),
-                )
+            Column(
+              modifier = Modifier.padding(14.dp),
+              verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+              if (state.devices.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                  items(state.devices, key = { it.address }) { dev ->
+                    FilterChip(
+                      selected = dev.address == selectedAddress,
+                      onClick = { onSelectEqDevice(dev.address) },
+                      label = { Text(dev.name) },
+                      modifier = Modifier.testTag("eq_device_chip_${dev.address}"),
+                    )
+                  }
+                }
+              }
+
+              LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(AudioSyncDspEngine.PRESETS.keys.toList()) { preset ->
+                  FilterChip(
+                    selected = state.activeEqPreset == preset,
+                    onClick = { onApplyPreset(preset) },
+                    label = { Text(preset) },
+                    modifier = Modifier.testTag("eq_preset_${preset.lowercase().replace(" ", "_")}"),
+                  )
+                }
               }
             }
           }
         }
       }
 
+      // 2. 5-Band Graphic Equalizer + Bass/Spatial/Balance
       item {
         Surface(
           shape = MaterialTheme.shapes.large,
@@ -178,12 +228,12 @@ fun EqRulesScreen(
 
               Surface(
                 shape = RoundedCornerShape(50),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                color = bento.cyanBg,
               ) {
                 Text(
                   text = state.activeEqPreset,
                   style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.primary,
+                  color = bento.cyanInk,
                   modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                 )
               }
@@ -288,6 +338,7 @@ fun EqRulesScreen(
         }
       }
 
+      // 3. Earbud Battery Telemetry
       item {
         Surface(
           shape = MaterialTheme.shapes.large,
@@ -317,11 +368,12 @@ fun EqRulesScreen(
               Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
               ) {
                 Text(selectedDeviceName, style = MaterialTheme.typography.bodyMedium)
                 Text(
                   text = "$battery%",
-                  style = MaterialTheme.typography.titleMedium,
+                  style = CondensedMediumMetricStyle,
                   color = if (battery <= 20) extended.signalBad else extended.signalGood,
                 )
               }
@@ -341,6 +393,7 @@ fun EqRulesScreen(
         }
       }
 
+      // 4. Auto-Connect Automation Rules
       item {
         Surface(
           shape = MaterialTheme.shapes.large,

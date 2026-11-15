@@ -2,8 +2,8 @@ package com.example.ui.screens
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,7 +35,6 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Remove
-import androidx.compose.material.icons.rounded.SpeakerGroup
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -61,11 +60,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.R
 import com.example.model.AudioOutputSink
 import com.example.model.BluetoothDeviceUiModel
 import com.example.model.CalibrationMode
@@ -73,8 +76,11 @@ import com.example.model.DualAudioRouteMode
 import com.example.model.FeatureGuideId
 import com.example.model.MediaPlaybackState
 import com.example.ui.MainUiState
+import com.example.ui.components.BentoColorCard
+import com.example.ui.components.DualChannelWaveVisualizer
 import com.example.ui.components.ExpressiveInfoButton
 import com.example.ui.components.WavyAudioScrubber
+import com.example.ui.theme.CondensedMediumMetricStyle
 import com.example.ui.theme.LocalBluePulseColors
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -125,23 +131,24 @@ fun DualSyncScreen(
       modifier = Modifier
         .widthIn(max = 760.dp)
         .fillMaxSize(),
-      contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 104.dp),
+      contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 108.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-      // 1. 4-Mode Dual-Audio Bridge Strategy Selector (works even on non-Dual-BT phones)
+      // 1. Editorial Dual-Sharing Lifestyle Showcase + 2x2 Color-Blocked Routing Grid
       item {
         DualBridgeStrategyCard(
           routeMode = sync.routeMode,
           monoMixForSplit = sync.monoMixForSplit,
           leAudioSupported = sync.leAudioSupported,
           leAudioBroadcastSupported = sync.leAudioBroadcastSupported,
+          isPlaying = sync.isCalibrationPlaying,
           onSelectMode = onSetDualRouteMode,
           onSetMonoMixSplit = onSetMonoMixSplit,
           onOpenGuide = { onOpenGuide(FeatureGuideId.DUAL_BRIDGE) },
         )
       }
 
-      // 2. Expressive Dual Audio File Player & Calibration Studio (Coral Hero Play + Wavy Scrubber)
+      // 2. Expressive Dual Audio Media Player & Latency Sync Studio
       item {
         DualMediaPlayerAndCalibrationCard(
           media = state.mediaPlayback,
@@ -199,7 +206,7 @@ fun DualSyncScreen(
                     text = if (sync.isLinked) {
                       "Output A & B share identical volume & delay"
                     } else {
-                      "Separate gain & latency calibrated (Δ ${formatMs(latencyDelta)})"
+                      "Separate gain & delay calibrated (Δ ${formatMs(latencyDelta)})"
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -247,10 +254,12 @@ fun DualSyncScreen(
         }
       }
 
-      // 4. Output A Deck (AudioSink + Bluetooth Profile + Gain + ms Latency + L/R Balance)
+      // 4. Output A Deck (Lavender Accent Badge)
       item {
         OutputDeckCard(
           label = "OUTPUT A",
+          badgeBg = extended.bento.lavenderBg,
+          badgeInk = extended.bento.lavenderInk,
           selectedSinkName = sinkAName,
           availableSinks = state.availableAudioSinks,
           selectedDeviceName = deviceAName,
@@ -268,10 +277,12 @@ fun DualSyncScreen(
         )
       }
 
-      // 5. Output B Deck
+      // 5. Output B Deck (Cyan Accent Badge)
       item {
         OutputDeckCard(
           label = "OUTPUT B",
+          badgeBg = extended.bento.cyanBg,
+          badgeInk = extended.bento.cyanInk,
           selectedSinkName = sinkBName,
           availableSinks = state.availableAudioSinks,
           selectedDeviceName = deviceBName,
@@ -298,148 +309,184 @@ private fun DualBridgeStrategyCard(
   monoMixForSplit: Boolean,
   leAudioSupported: Boolean,
   leAudioBroadcastSupported: Boolean,
+  isPlaying: Boolean,
   onSelectMode: (DualAudioRouteMode) -> Unit,
   onSetMonoMixSplit: (Boolean) -> Unit,
   onOpenGuide: () -> Unit,
 ) {
   val extended = LocalBluePulseColors.current
+  val bento = extended.bento
 
-  Surface(
-    shape = MaterialTheme.shapes.extraLarge,
-    color = MaterialTheme.colorScheme.surfaceContainer,
-    border = extended.cardBorder,
-  ) {
-    Column(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
+  Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    // Visual Editorial Lifestyle Showcase Banner
+    Surface(
+      shape = MaterialTheme.shapes.extraLarge,
+      color = bento.plumBg,
+      contentColor = bento.plumInk,
     ) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(172.dp),
       ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(10.dp),
-          modifier = Modifier.weight(1f),
-        ) {
-          Box(
-            modifier = Modifier
-              .size(42.dp)
-              .clip(CircleShape)
-              .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
-            contentAlignment = Alignment.Center,
-          ) {
-            Icon(
-              imageVector = Icons.Rounded.SpeakerGroup,
-              contentDescription = "Dual Audio Bridge",
-              tint = MaterialTheme.colorScheme.primary,
-            )
-          }
-          Column {
-            Text("Dual-Audio Bridge", style = MaterialTheme.typography.headlineSmall)
-            Text(
-              text = if (leAudioSupported) {
-                "LE Audio (${if (leAudioBroadcastSupported) "Auracast" else "Unicast"}) + Universal Bridge"
-              } else {
-                "Universal Dual-Output active on Classic BT phones"
-              },
-              style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.primary,
-            )
-          }
-        }
-
-        ExpressiveInfoButton(
-          contentDescription = "How Dual-Audio Bridge works on non-dual-Bluetooth phones",
-          testTag = "dual_bridge_info_btn",
-          onClick = onOpenGuide,
+        Image(
+          painter = painterResource(id = R.drawable.img_dual_audio_sharing),
+          contentDescription = "Dual audio sharing lifestyle visual",
+          contentScale = ContentScale.Crop,
+          modifier = Modifier.fillMaxSize(),
         )
-      }
-
-      LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(DualAudioRouteMode.entries) { mode ->
-          val selected = routeMode == mode
-          Surface(
-            shape = MaterialTheme.shapes.medium,
-            color = if (selected) {
-              MaterialTheme.colorScheme.primaryContainer
-            } else {
-              MaterialTheme.colorScheme.surfaceContainerHigh
-            },
-            border = extended.cardBorder,
-            modifier = Modifier
-              .width(172.dp)
-              .clip(MaterialTheme.shapes.medium)
-              .clickable { onSelectMode(mode) }
-              .testTag("route_mode_${mode.name.lowercase()}"),
-          ) {
-            Column(
-              modifier = Modifier.padding(12.dp),
-              verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-              Surface(
-                shape = RoundedCornerShape(50),
-                color = if (selected) extended.coralHero else MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
-              ) {
-                Text(
-                  text = mode.badge,
-                  style = MaterialTheme.typography.labelSmall,
-                  color = if (selected) Color.White else MaterialTheme.colorScheme.primary,
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+        Box(
+          modifier = Modifier
+            .fillMaxSize()
+            .background(
+              Brush.horizontalGradient(
+                colors = listOf(
+                  bento.plumBg.copy(alpha = 0.94f),
+                  bento.plumBg.copy(alpha = 0.72f),
+                  Color.Transparent,
                 )
-              }
-              Text(
-                text = mode.title,
-                style = MaterialTheme.typography.titleSmall,
-                color = if (selected) {
-                  MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                  MaterialTheme.colorScheme.onSurface
-                },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
               )
-              Text(
-                text = mode.subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-              )
-            }
-          }
-        }
-      }
-
-      if (routeMode == DualAudioRouteMode.TWS_SPLIT_LR) {
-        Surface(
-          shape = MaterialTheme.shapes.medium,
-          color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ),
+        )
+        Column(
+          modifier = Modifier
+            .fillMaxSize()
+            .padding(18.dp),
+          verticalArrangement = Arrangement.SpaceBetween,
         ) {
           Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
           ) {
-            Column(modifier = Modifier.weight(1f).padding(end = 10.dp)) {
-              Text("Mono-Mix L & R Earbuds", style = MaterialTheme.typography.titleSmall)
+            Surface(
+              shape = RoundedCornerShape(50),
+              color = bento.limeBg,
+            ) {
               Text(
-                text = "Send full mixed stereo into both Left & Right buds when sharing",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = if (leAudioSupported) {
+                  if (leAudioBroadcastSupported) "AURACAST + BRIDGE" else "LE AUDIO + BRIDGE"
+                } else {
+                  "WORKS ON ANY PHONE"
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = bento.limeInk,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
               )
             }
-            Switch(
-              checked = monoMixForSplit,
-              onCheckedChange = onSetMonoMixSplit,
-              modifier = Modifier.testTag("dual_mono_split_switch"),
+            ExpressiveInfoButton(
+              contentDescription = "How Dual-Audio Bridge works on non-dual-Bluetooth phones",
+              testTag = "dual_bridge_info_btn",
+              tint = bento.plumInk,
+              onClick = onOpenGuide,
             )
           }
+
+          Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+              text = "Dual Audio Bridge",
+              style = MaterialTheme.typography.displaySmall,
+              color = Color.White,
+            )
+            DualChannelWaveVisualizer(
+              isPlaying = isPlaying,
+              waveColorA = bento.limeBg,
+              waveColorB = bento.coralBg,
+              modifier = Modifier.width(180.dp),
+            )
+          }
+        }
+      }
+    }
+
+    // Color-Blocked 2x2 Routing Mode Bento Selector
+    val modes = DualAudioRouteMode.entries
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+      modes.chunked(2).forEach { rowModes ->
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+          rowModes.forEach { mode ->
+            val selected = routeMode == mode
+            val (bg, ink) = when (mode) {
+              DualAudioRouteMode.BT_PLUS_WIRED_USB -> bento.coralBg to bento.coralInk
+              DualAudioRouteMode.TWS_SPLIT_LR -> bento.limeBg to bento.limeInk
+              DualAudioRouteMode.BT_A2DP_PLUS_SCO -> bento.cyanBg to bento.cyanInk
+              DualAudioRouteMode.NATIVE_MULTI_BT -> bento.lavenderBg to bento.lavenderInk
+            }
+
+            BentoColorCard(
+              containerColor = if (selected) bg else MaterialTheme.colorScheme.surfaceContainer,
+              contentColor = if (selected) ink else MaterialTheme.colorScheme.onSurface,
+              border = if (selected) null else extended.cardBorder,
+              shape = MaterialTheme.shapes.medium,
+              onClick = { onSelectMode(mode) },
+              modifier = Modifier
+                .weight(1f)
+                .testTag("route_mode_${mode.name.lowercase()}"),
+            ) {
+              Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+              ) {
+                Surface(
+                  shape = RoundedCornerShape(50),
+                  color = if (selected) ink else bg.copy(alpha = 0.25f),
+                ) {
+                  Text(
+                    text = mode.badge,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selected) bg else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                  )
+                }
+                Text(
+                  text = mode.title,
+                  style = MaterialTheme.typography.titleSmall,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                  text = mode.subtitle,
+                  style = MaterialTheme.typography.bodySmall,
+                  color = if (selected) ink.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                  maxLines = 2,
+                  overflow = TextOverflow.Ellipsis,
+                )
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (routeMode == DualAudioRouteMode.TWS_SPLIT_LR) {
+      Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        border = extended.cardBorder,
+      ) {
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Column(modifier = Modifier.weight(1f).padding(end = 10.dp)) {
+            Text("Mono-Mix L & R Earbuds", style = MaterialTheme.typography.titleSmall)
+            Text(
+              text = "Send full mixed stereo into both Left & Right buds when sharing",
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          }
+          Switch(
+            checked = monoMixForSplit,
+            onCheckedChange = onSetMonoMixSplit,
+            modifier = Modifier.testTag("dual_mono_split_switch"),
+          )
         }
       }
     }
@@ -536,7 +583,6 @@ private fun DualMediaPlayerAndCalibrationCard(
         }
       }
 
-      // Local Audio File Picker + Clear
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -580,7 +626,6 @@ private fun DualMediaPlayerAndCalibrationCard(
         }
       }
 
-      // Expressive Wavy Scrubber & Time Readout
       val progress = if (media.durationMs > 0) {
         (media.positionMs.toFloat() / media.durationMs.toFloat()).coerceIn(0f, 1f)
       } else {
@@ -594,15 +639,16 @@ private fun DualMediaPlayerAndCalibrationCard(
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
       ) {
         Text(
           text = formatClock(media.positionMs),
-          style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = CondensedMediumMetricStyle,
+          color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
           text = formatClock(media.durationMs),
-          style = MaterialTheme.typography.labelSmall,
+          style = CondensedMediumMetricStyle,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
@@ -615,7 +661,7 @@ private fun DualMediaPlayerAndCalibrationCard(
       Canvas(
         modifier = Modifier
           .fillMaxWidth()
-          .height(46.dp)
+          .height(44.dp)
           .clip(RoundedCornerShape(14.dp))
           .background(trackColor),
       ) {
@@ -645,7 +691,6 @@ private fun DualMediaPlayerAndCalibrationCard(
         )
       }
 
-      // Coral Hero Play/Pause Pill + Zero Delay
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -653,8 +698,8 @@ private fun DualMediaPlayerAndCalibrationCard(
         Button(
           onClick = onTogglePlay,
           colors = ButtonDefaults.buttonColors(
-            containerColor = extended.coralHero,
-            contentColor = Color.White,
+            containerColor = extended.bento.coralBg,
+            contentColor = extended.bento.coralInk,
           ),
           shape = RoundedCornerShape(50),
           modifier = Modifier
@@ -675,6 +720,7 @@ private fun DualMediaPlayerAndCalibrationCard(
             } else {
               "RUN SYNC"
             },
+            style = MaterialTheme.typography.labelLarge,
           )
         }
 
@@ -696,6 +742,8 @@ private fun DualMediaPlayerAndCalibrationCard(
 @Composable
 private fun OutputDeckCard(
   label: String,
+  badgeBg: Color,
+  badgeInk: Color,
   selectedSinkName: String,
   availableSinks: List<AudioOutputSink>,
   selectedDeviceName: String,
@@ -733,24 +781,23 @@ private fun OutputDeckCard(
       ) {
         Surface(
           shape = RoundedCornerShape(50),
-          color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+          color = badgeBg,
         ) {
           Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            color = badgeInk,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
           )
         }
 
         Text(
           text = formatMs(latencyMs),
-          style = MaterialTheme.typography.labelMedium,
+          style = CondensedMediumMetricStyle,
           color = if (abs(latencyMs) > 60) extended.signalWarn else MaterialTheme.colorScheme.primary,
         )
       }
 
-      // Sink & Bluetooth Profile Pickers
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),

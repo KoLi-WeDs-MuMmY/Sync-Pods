@@ -57,6 +57,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.model.BluetoothDeviceUiModel
+import com.example.ui.theme.CondensedMediumMetricStyle
 import com.example.ui.theme.LocalBluePulseColors
 import kotlin.math.cos
 import kotlin.math.sin
@@ -416,7 +417,7 @@ private fun BatteryRingCard(
       )
       Text(
         text = percent?.let { "$it%" } ?: "--",
-        style = MaterialTheme.typography.titleMedium,
+        style = CondensedMediumMetricStyle,
         color = if (percent != null) color else MaterialTheme.colorScheme.onSurfaceVariant,
       )
     }

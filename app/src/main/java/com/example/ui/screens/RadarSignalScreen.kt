@@ -28,7 +28,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.BluetoothSearching
 import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.Radar
 import androidx.compose.material.icons.rounded.Sensors
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -54,14 +53,17 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.model.BluetoothDeviceUiModel
 import com.example.model.FeatureGuideId
 import com.example.model.RssiSample
 import com.example.ui.MainUiState
 import com.example.ui.MainViewModel
+import com.example.ui.components.BentoColorCard
 import com.example.ui.components.ExpressiveInfoButton
 import com.example.ui.components.ScallopedExpressiveRing
+import com.example.ui.theme.CondensedHeroMetricStyle
 import com.example.ui.theme.LocalBluePulseColors
 import kotlin.math.cos
 import kotlin.math.sin
@@ -76,6 +78,7 @@ fun RadarSignalScreen(
   modifier: Modifier = Modifier,
 ) {
   val extended = LocalBluePulseColors.current
+  val bento = extended.bento
   val haptics = LocalHapticFeedback.current
   val targetDevice = state.devices.firstOrNull { it.address == state.radarTargetAddress }
   val samples = targetDevice?.let { state.rssiHistory[it.address].orEmpty() }.orEmpty()
@@ -95,50 +98,54 @@ fun RadarSignalScreen(
       modifier = Modifier
         .widthIn(max = 760.dp)
         .fillMaxSize(),
-      contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 104.dp),
+      contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 108.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+      // Acid Lime Color-Blocked Telemetry Hero
       item {
-        Surface(
+        BentoColorCard(
+          containerColor = bento.limeBg,
+          contentColor = bento.limeInk,
           shape = MaterialTheme.shapes.extraLarge,
-          color = MaterialTheme.colorScheme.surfaceContainer,
-          border = extended.cardBorder,
         ) {
           Column(
             modifier = Modifier
               .fillMaxWidth()
-              .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+              .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
           ) {
             Row(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically,
             ) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f),
-              ) {
-                Icon(
-                  imageVector = Icons.Rounded.Radar,
-                  contentDescription = "Signal Radar",
-                  tint = MaterialTheme.colorScheme.primary,
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  text = "RSSI Radar",
+                  style = MaterialTheme.typography.displaySmall,
+                  color = bento.limeInk,
                 )
-                Text("RSSI Proximity Radar", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                  text = targetDevice?.name ?: "Select target or tap Ping",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = bento.limeInk.copy(alpha = 0.78f),
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
+                )
               }
 
               Row(verticalAlignment = Alignment.CenterVertically) {
                 ExpressiveInfoButton(
                   contentDescription = "How RSSI Proximity Radar Finder works",
                   testTag = "radar_info_btn",
+                  tint = bento.limeInk,
                   onClick = { onOpenGuide(FeatureGuideId.RADAR_FINDER) },
                 )
                 Button(
                   onClick = onToggleScan,
                   colors = ButtonDefaults.buttonColors(
-                    containerColor = extended.coralHero,
-                    contentColor = Color.White,
+                    containerColor = bento.plumBg,
+                    contentColor = bento.plumInk,
                   ),
                   shape = RoundedCornerShape(50),
                   modifier = Modifier
@@ -156,6 +163,37 @@ fun RadarSignalScreen(
               }
             }
 
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.Bottom,
+            ) {
+              Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                  text = liveRssi?.toString() ?: "--",
+                  style = CondensedHeroMetricStyle,
+                  color = bento.limeInk,
+                )
+                Text(
+                  text = "dBm",
+                  style = MaterialTheme.typography.titleMedium,
+                  color = bento.limeInk.copy(alpha = 0.78f),
+                  modifier = Modifier.padding(bottom = 8.dp),
+                )
+              }
+              Surface(
+                shape = RoundedCornerShape(50),
+                color = bento.limeInk.copy(alpha = 0.12f),
+              ) {
+                Text(
+                  text = liveRssi?.let { MainViewModel.estimateProximityLabel(it) } ?: "Standby",
+                  style = MaterialTheme.typography.labelMedium,
+                  color = bento.limeInk,
+                  modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+              }
+            }
+
             if (state.devices.isNotEmpty()) {
               LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(state.devices, key = { it.address }) { dev ->
@@ -167,12 +205,6 @@ fun RadarSignalScreen(
                   )
                 }
               }
-            } else {
-              Text(
-                text = "No paired or scanned devices yet. Run a scan from the Hub or tap Ping to locate nearby beacons.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
             }
           }
         }
@@ -447,6 +479,7 @@ private fun CodecInspectorCard(
   onOpenGuide: () -> Unit,
 ) {
   val extended = LocalBluePulseColors.current
+  val bento = extended.bento
   val codec = targetDevice?.codecInfo
 
   Surface(
@@ -495,17 +528,17 @@ private fun CodecInspectorCard(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-          CodecSpecTile("Codec", codec.codecName, Modifier.weight(1f))
-          CodecSpecTile("Sample Rate", codec.sampleRateKhz, Modifier.weight(1f))
-          CodecSpecTile("Bit Depth", codec.bitsPerSample, Modifier.weight(1f))
+          CodecSpecTile("Codec", codec.codecName, bento.lavenderBg, bento.lavenderInk, Modifier.weight(1f))
+          CodecSpecTile("Sample Rate", codec.sampleRateKhz, bento.cyanBg, bento.cyanInk, Modifier.weight(1f))
+          CodecSpecTile("Bit Depth", codec.bitsPerSample, bento.coralBg, bento.coralInk, Modifier.weight(1f))
         }
         Row(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-          CodecSpecTile("Channel", codec.channelMode, Modifier.weight(1f))
-          CodecSpecTile("Bitrate", codec.bitrateLabel, Modifier.weight(1f))
-          CodecSpecTile("Est. Latency", "${codec.estimatedLatencyMs} ms", Modifier.weight(1f))
+          CodecSpecTile("Channel", codec.channelMode, MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+          CodecSpecTile("Bitrate", codec.bitrateLabel, MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+          CodecSpecTile("Est. Latency", "${codec.estimatedLatencyMs} ms", bento.limeBg, bento.limeInk, Modifier.weight(1f))
         }
       }
     }
@@ -516,12 +549,14 @@ private fun CodecInspectorCard(
 private fun CodecSpecTile(
   label: String,
   value: String,
+  bg: Color,
+  ink: Color,
   modifier: Modifier = Modifier,
 ) {
   Surface(
     modifier = modifier,
     shape = MaterialTheme.shapes.small,
-    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    color = bg,
   ) {
     Column(
       modifier = Modifier.padding(10.dp),
@@ -530,12 +565,12 @@ private fun CodecSpecTile(
       Text(
         text = label,
         style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = ink.copy(alpha = 0.72f),
       )
       Text(
         text = value,
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = ink,
       )
     }
   }

@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.AppPreferences
 import com.example.model.AudioOutputSink
@@ -29,7 +30,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [36], qualifiers = "w411dp-h915dp")
 class ExampleRobolectricTest {
 
   @get:Rule
@@ -54,6 +55,7 @@ class ExampleRobolectricTest {
     var active3DDevice: BluetoothDeviceUiModel? = null
     var activeGuide: FeatureGuideId? = null
     var selectedRouteMode = DualAudioRouteMode.BT_PLUS_WIRED_USB
+    var quickPlayToggled = 0
 
     val sampleBuds = BluetoothDeviceUiModel(
       address = "AA:BB:CC:DD:EE:01",
@@ -155,7 +157,7 @@ class ExampleRobolectricTest {
         onDeviceABalanceChange = {},
         onDeviceBBalanceChange = {},
         onCalibrationModeChange = {},
-        onToggleCalibrationTone = {},
+        onToggleCalibrationTone = { quickPlayToggled++ },
         onSelectRadarTarget = {},
         onStopRadarMonitor = {},
         onSelectEqDevice = {},
@@ -168,6 +170,7 @@ class ExampleRobolectricTest {
 
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("AMOLED").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Pure Dual\nSound.").assertIsDisplayed()
     composeTestRule.onNodeWithTag("floating_island_pill").assertIsDisplayed()
     composeTestRule.onNodeWithTag("floating_pill_dock").assertIsDisplayed()
 
@@ -178,6 +181,17 @@ class ExampleRobolectricTest {
     // Trigger 3D Rotating Earbuds Pop-Up modal button
     composeTestRule.onNodeWithTag("hub_3d_popup_button").performClick()
     assertEquals("Studio Buds Pro", active3DDevice?.name)
+
+    // Scroll to & verify Asymmetric Bento Grid cards + quick-play action
+    composeTestRule.onNodeWithTag("hub_bento_dual_card").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("hub_bento_radar_card").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("hub_bento_eq_card").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("hub_bento_quick_play").performScrollTo().performClick()
+    assertEquals(1, quickPlayToggled)
+
+    // Clicking Radar Bento tile navigates to Radar tab
+    composeTestRule.onNodeWithTag("hub_bento_radar_card").performScrollTo().performClick()
+    assertEquals(BluePulseTab.RADAR, currentTab)
 
     // Navigate to Dual Sync using the Expressive Floating Pill Dock
     composeTestRule.onNodeWithTag("nav_tab_dual_sync").performClick()
